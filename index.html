@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WELLSMADE.CO - Where ideas run wild</title>
+    <style>
+        /* Import modern font */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+        
+        /* Reset and base styles */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #87CEEB 0%, #98D8E8 100%);
+            overflow: hidden;
+            user-select: none;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        /* Header styles */
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            z-index: 10;
+        }
+        
+        .title {
+            font-size: clamp(2rem, 5vw, 4rem);
+            font-weight: 700;
+            color: #2c3e50;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .subtitle {
+            font-size: clamp(1rem, 2.5vw, 1.5rem);
+            font-weight: 300;
+            color: #34495e;
+            font-style: italic;
+        }
+        
+        /* Game container */
+        .game-container {
+            position: relative;
+            width: 100vw;
+            max-width: 1200px;
+            height: 400px;
+            background: linear-gradient(to bottom, #87CEEB 0%, #98D8E8 60%, #90EE90 60%, #228B22 100%);
+            border: 3px solid #2c3e50;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+        
+        /* Game canvas */
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        
+        /* UI Elements */
+        .score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            font-weight: 600;
+            color: #2c3e50;
+            z-index: 5;
+            text-shadow: 1px 1px 2px rgba(255,255,255,0.8);
+        }
+        
+        .mute-button {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            width: 50px;
+            height: 50px;
+            background: rgba(255,255,255,0.9);
+            border: 2px solid #2c3e50;
+            border-radius: 50%;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.3s ease;
+            z-index: 5;
+        }
+        
+        .mute-button:hover {
+            background: rgba(255,255,255,1);
+            transform: scale(1.1);
+        }
+        
+        /* Game over screen */
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.95);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            z-index: 10;
+            display: none;
+        }
+        
+        .game-over h2 {
+            font-size: 32px;
+            color: #e74c3c;
+            margin-bottom: 20px;
+        }
+        
+        .game-over p {
+            font-size: 18px;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        
+        .play-again-btn {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .play-again-btn:hover {
+            background: #2980b9;
+            transform: translateY(-2px);
+        }
+        
+        /* Start screen */
+        .start-screen {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255,255,255,0.95);
+            padding: 40px;
+            border-radius: 15px;
+            text-align: center;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.3);
+            z-index: 10;
+        }
+        
+        .start-screen h2 {
+            font-size: 28px;
+            color: #2c3e50;
+            margin-bottom: 20px;
+        }
+        
+        .start-screen p {
+            font-size: 16px;
+            color: #34495e;
+            margin-bottom: 30px;
+            line-height: 1.5;
+        }
+        
+        .start-btn {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .start-btn:hover {
+            background: #229954;
+            transform: translateY(-2px);
+        }
+        
+        /* Mobile responsiveness */
+        @media (max-width: 768px) {
+            .game-container {
+                height: 300px;
+                border-radius: 5px;
+                margin: 0 10px;
+            }
+            
+            .header {
+                margin-bottom: 15px;
+            }
+            
+            .score {
+                font-size: 20px;
+            }
+            
+            .mute-button {
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
+            
+            .game-over, .start-screen {
+                padding: 30px 20px;
+                margin: 0 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <h1 class="title">WELLSMADE.CO</h1>
+        <p class="subtitle">Where ideas run wild.</p>
+    </div>
+    
+    <!-- Game Container -->
+    <div class="game-container">
+        <canvas id="gameCanvas"></canvas>
+        <div class="score">Score: <span id="scoreValue">0</span></div>
+        <div class="mute-button" id="muteBtn">🔊</div>
+        
+        <!-- Start Screen -->
+        <div class="start-screen" id="startScreen">
+            <h2>Ready to Run?</h2>
+            <p>Help the golden Border Collie chase the squirrel!<br>
+            Press SPACEBAR or TAP to jump over obstacles.<br>
+            How far can you run?</p>
+            <button class="start-btn" id="startBtn">START GAME</button>
+        </div>
+        
+        <!-- Game Over Screen -->
+        <div class="game-over" id="gameOverScreen">
+            <h2>Game Over!</h2>
+            <p>Final Score: <span id="finalScore">0</span></p>
+            <button class="play-again-btn" id="playAgainBtn">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <script>
+        // Game variables and initialization
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const startScreen = document.getElementById('startScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const scoreElement = document.getElementById('scoreValue');
+        const finalScoreElement = document.getElementById('finalScore');
+        const muteBtn = document.getElementById('muteBtn');
+        
+        // Set canvas size
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+        }
+        
+        // Game state
+        let gameState = 'start'; // 'start', 'playing', 'gameOver'
+        let score = 0;
+        let gameSpeed = 3;
+        let isJumping = false;
+        let isMuted = false;
+        
+        // Audio context for background music
+        let audioContext;
+        let musicSource;
+        let musicBuffer;
+        
+        // Game objects
+        const player = {
+            x: 100,
+            y: canvas?.height - 80 || 320,
+            width: 60,
+            height: 40,
+            velocityY: 0,
+            jumpPower: -15,
+            gravity: 0.8,
+            grounded: true,
+            color: '#FFD700' // Gold color
+        };
+        
+        const squirrel = {
+            x: 200,
+            y: canvas?.height - 80 || 320,
+            width: 40,
+            height: 30,
+            velocityY: 0,
+            jumpPower: -12,
+            gravity: 0.8,
+            grounded: true,
+            color: '#8B4513', // Brown color
+            jumpCooldown: 0
+        };
+        
+        const obstacles = [];
+        const clouds = [];
+        
+        // Initialize game
+        function init() {
+            resizeCanvas();
+            setupAudio();
+            resetGame();
+            
+            // Event listeners
+            document.addEventListener('keydown', handleKeyPress);
+            canvas.addEventListener('click', handleClick);
+            canvas.addEventListener('touchstart', handleTouch);
+            document.getElementById('startBtn').addEventListener('click', startGame);
+            document.getElementById('playAgainBtn').addEventListener('click', restartGame);
+            muteBtn.addEventListener('click', toggleMute);
+            
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Start game loop
+            gameLoop();
+        }
+        
+        // Audio setup
+        async function setupAudio() {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                // Create a simple background music using Web Audio API
+                const sampleRate = audioContext.sampleRate;
+                const duration = 4; // 4 seconds loop
+                const frameCount = sampleRate * duration;
+                
+                musicBuffer = audioContext.createBuffer(1, frameCount, sampleRate);
+                const channelData = musicBuffer.getChannelData(0);
+                
+                // Generate a simple melody
+                for (let i = 0; i < frameCount; i++) {
+                    const t = i / sampleRate;
+                    const freq = 220 + Math.sin(t * 2) * 50; // Varying frequency
+                    channelData[i] = Math.sin(2 * Math.PI * freq * t) * 0.1 * Math.sin(t * Math.PI / duration);
+                }
+            } catch (error) {
+                console.log('Audio setup failed:', error);
+            }
+        }
+        
+        // Start background music
+        function startMusic() {
+            if (!audioContext || !musicBuffer || isMuted) return;
+            
+            try {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+                
+                musicSource = audioContext.createBufferSource();
+                musicSource.buffer = musicBuffer;
+                musicSource.loop = true;
+                musicSource.connect(audioContext.destination);
+                musicSource.start();
+            } catch (error) {
+                console.log('Music start failed:', error);
+            }
+        }
+        
+        // Stop background music
+        function stopMusic() {
+            if (musicSource) {
+                musicSource.stop();
+                musicSource = null;
+            }
+        }
+        
+        // Toggle mute
+        function toggleMute() {
+            isMuted = !isMuted;
+            muteBtn.textContent = isMuted ? '🔇' : '🔊';
+            
+            if (isMuted) {
+                stopMusic();
+            } else if (gameState === 'playing') {
+                startMusic();
+            }
+        }
+        
+        // Input handlers
+        function handleKeyPress(e) {
+            if (e.code === 'Space') {
+                e.preventDefault();
+                if (gameState === 'playing') {
+                    jump();
+                }
+            }
+        }
+        
+        function handleClick(e) {
+            if (gameState === 'playing') {
+                jump();
+            }
+        }
+        
+        function handleTouch(e) {
+            e.preventDefault();
+            if (gameState === 'playing') {
+                jump();
+            }
+        }
+        
+        // Player jump
+        function jump() {
+            if (player.grounded) {
+                player.velocityY = player.jumpPower;
+                player.grounded = false;
+                isJumping = true;
+            }
+        }
+        
+        // Start game
+        function startGame() {
+            gameState = 'playing';
+            startScreen.style.display = 'none';
+            startMusic();
+        }
+        
+        // Restart game
+        function restartGame() {
+            resetGame();
+            gameState = 'playing';
+            gameOverScreen.style.display = 'none';
+            startMusic();
+        }
+        
+        // Reset game state
+        function resetGame() {
+            score = 0;
+            gameSpeed = 3;
+            obstacles.length = 0;
+            clouds.length = 0;
+            
+            // Reset player
+            player.y = canvas.height - 80;
+            player.velocityY = 0;
+            player.grounded = true;
+            
+            // Reset squirrel
+            squirrel.y = canvas.height - 80;
+            squirrel.velocityY = 0;
+            squirrel.grounded = true;
+            squirrel.jumpCooldown = 0;
+            
+            // Generate initial clouds
+            generateClouds();
+            
+            updateScore();
+        }
+        
+        // Generate obstacles
+        function generateObstacle() {
+            if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 300) {
+                obstacles.push({
+                    x: canvas.width,
+                    y: canvas.height - 60,
+                    width: 30,
+                    height: 60,
+                    color: '#654321'
+                });
+            }
+        }
+        
+        // Generate clouds
+        function generateClouds() {
+            for (let i = 0; i < 5; i++) {
+                clouds.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * 100 + 20,
+                    width: Math.random() * 80 + 40,
+                    height: Math.random() * 40 + 20,
+                    speed: Math.random() * 0.5 + 0.2
+                });
+            }
+        }
+        
+        // Update game logic
+        function update() {
+            if (gameState !== 'playing') return;
+            
+            // Update score
+            score += gameSpeed * 0.1;
+            updateScore();
+            
+            // Increase game speed gradually
+            gameSpeed += 0.001;
+            
+            // Update player physics
+            updatePlayerPhysics();
+            
+            // Update squirrel AI
+            updateSquirrelAI();
+            
+            // Generate and update obstacles
+            generateObstacle();
+            updateObstacles();
+            
+            // Update clouds
+            updateClouds();
+            
+            // Check collisions
+            checkCollisions();
+        }
+        
+        // Update player physics
+        function updatePlayerPhysics() {
+            // Apply gravity
+            if (!player.grounded) {
+                player.velocityY += player.gravity;
+                player.y += player.velocityY;
+            }
+            
+            // Ground collision
+            const groundY = canvas.height - 80;
+            if (player.y >= groundY) {
+                player.y = groundY;
+                player.velocityY = 0;
+                player.grounded = true;
+                isJumping = false;
+            }
+        }
+        
+        // Update squirrel AI
+        function updateSquirrelAI() {
+            // Decrease jump cooldown
+            if (squirrel.jumpCooldown > 0) {
+                squirrel.jumpCooldown--;
+            }
+            
+            // Check if squirrel should jump (look ahead for obstacles)
+            let shouldJump = false;
+            for (let obstacle of obstacles) {
+                if (obstacle.x > squirrel.x && obstacle.x < squirrel.x + 120 && squirrel.grounded && squirrel.jumpCooldown === 0) {
+                    shouldJump = true;
+                    break;
+                }
+            }
+            
+            // Make squirrel jump
+            if (shouldJump) {
+                squirrel.velocityY = squirrel.jumpPower;
+                squirrel.grounded = false;
+                squirrel.jumpCooldown = 30; // Cooldown to prevent rapid jumping
+            }
+            
+            // Apply gravity to squirrel
+            if (!squirrel.grounded) {
+                squirrel.velocityY += squirrel.gravity;
+                squirrel.y += squirrel.velocityY;
+            }
+            
+            // Ground collision for squirrel
+            const groundY = canvas.height - 80;
+            if (squirrel.y >= groundY) {
+                squirrel.y = groundY;
+                squirrel.velocityY = 0;
+                squirrel.grounded = true;
+            }
+        }
+        
+        // Update obstacles
+        function updateObstacles() {
+            for (let i = obstacles.length - 1; i >= 0; i--) {
+                obstacles[i].x -= gameSpeed;
+                
+                // Remove obstacles that are off-screen
+                if (obstacles[i].x + obstacles[i].width < 0) {
+                    obstacles.splice(i, 1);
+                }
+            }
+        }
+        
+        // Update clouds
+        function updateClouds() {
+            for (let cloud of clouds) {
+                cloud.x -= cloud.speed;
+                
+                // Reset cloud position when it goes off-screen
+                if (cloud.x + cloud.width < 0) {
+                    cloud.x = canvas.width + Math.random() * 200;
+                    cloud.y = Math.random() * 100 + 20;
+                }
+            }
+        }
+        
+        // Check collisions
+        function checkCollisions() {
+            for (let obstacle of obstacles) {
+                if (player.x < obstacle.x + obstacle.width &&
+                    player.x + player.width > obstacle.x &&
+                    player.y < obstacle.y + obstacle.height &&
+                    player.y + player.height > obstacle.y) {
+                    gameOver();
+                    break;
+                }
+            }
+        }
+        
+        // Game over
+        function gameOver() {
+            gameState = 'gameOver';
+            stopMusic();
+            finalScoreElement.textContent = Math.floor(score);
+            gameOverScreen.style.display = 'block';
+        }
+        
+        // Update score display
+        function updateScore() {
+            scoreElement.textContent = Math.floor(score);
+        }
+        
+        // Draw functions
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw background
+            drawBackground();
+            
+            // Draw clouds
+            drawClouds();
+            
+            // Draw ground
+            drawGround();
+            
+            // Draw game objects
+            if (gameState === 'playing') {
+                drawSquirrel();
+                drawPlayer();
+                drawObstacles();
+            }
+        }
+        
+        // Draw background
+        function drawBackground() {
+            // Sky gradient
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#87CEEB');
+            gradient.addColorStop(0.6, '#98D8E8');
+            gradient.addColorStop(0.6, '#90EE90');
+            gradient.addColorStop(1, '#228B22');
+            
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+        
+        // Draw clouds
+        function drawClouds() {
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+            for (let cloud of clouds) {
+                // Draw cloud as multiple circles
+                ctx.beginPath();
+                ctx.arc(cloud.x, cloud.y, cloud.width * 0.3, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.width * 0.3, cloud.y, cloud.width * 0.4, 0, Math.PI * 2);
+                ctx.arc(cloud.x + cloud.width * 0.6, cloud.y, cloud.width * 0.3, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+        
+        // Draw ground
+        function drawGround() {
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
+            
+            // Grass pattern
+            ctx.fillStyle = '#228B22';
+            for (let x = 0; x < canvas.width; x += 20) {
+                ctx.fillRect(x, canvas.height - 50, 3, -10);
+                ctx.fillRect(x + 7, canvas.height - 50, 3, -15);
+                ctx.fillRect(x + 14, canvas.height - 50, 3, -8);
+            }
+        }
+        
+        // Draw player (Border Collie)
+        function drawPlayer() {
+            ctx.save();
+            ctx.translate(player.x + player.width/2, player.y + player.height/2);
+            
+            // Body
+            ctx.fillStyle = player.color;
+            ctx.fillRect(-player.width/2, -player.height/2, player.width * 0.8, player.height * 0.6);
+            
+            // Head
+            ctx.fillStyle = player.color;
+            ctx.beginPath();
+            ctx.arc(-player.width/3, -player.height/3, player.width * 0.25, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Ears
+            ctx.fillStyle = '#B8860B';
+            ctx.beginPath();
+            ctx.ellipse(-player.width/2, -player.height/2, 8, 15, -0.3, 0, Math.PI * 2);
+            ctx.ellipse(-player.width/4, -player.height/2, 8, 15, 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Legs
+            ctx.fillStyle = player.color;
+            const legY = player.height/4;
+            ctx.fillRect(-player.width/3, legY, 8, 15);
+            ctx.fillRect(-player.width/6, legY, 8, 15);
+            ctx.fillRect(player.width/6, legY, 8, 15);
+            ctx.fillRect(player.width/3, legY, 8, 15);
+            
+            // Tail
+            ctx.strokeStyle = player.color;
+            ctx.lineWidth = 8;
+            ctx.beginPath();
+            ctx.arc(player.width/2, 0, 15, -Math.PI/4, Math.PI/4);
+            ctx.stroke();
+            
+            // Eye
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(-player.width/4, -player.height/3, 3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        }
+        
+        // Draw squirrel
+        function drawSquirrel() {
+            ctx.save();
+            ctx.translate(squirrel.x + squirrel.width/2, squirrel.y + squirrel.height/2);
+            
+            // Body
+            ctx.fillStyle = squirrel.color;
+            ctx.fillRect(-squirrel.width/2, -squirrel.height/2, squirrel.width * 0.7, squirrel.height * 0.8);
+            
+            // Head
+            ctx.beginPath();
+            ctx.arc(-squirrel.width/3, -squirrel.height/4, squirrel.width * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Tail (bushy)
+            ctx.fillStyle = '#A0522D';
+            ctx.beginPath();
+            ctx.ellipse(squirrel.width/2, 0, 15, 25, 0.5, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Ears
+            ctx.fillStyle = squirrel.color;
+            ctx.fillRect(-squirrel.width/2, -squirrel.height/2, 4, 8);
+            ctx.fillRect(-squirrel.width/4, -squirrel.height/2, 4, 8);
+            
+            // Eye
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(-squirrel.width/4, -squirrel.height/4, 2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.restore();
+        }
+        
+        // Draw obstacles
+        function drawObstacles() {
+            ctx.fillStyle = '#654321';
+            for (let obstacle of obstacles) {
+                // Draw as a tree stump
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                
+                // Tree rings
+                ctx.strokeStyle = '#8B4513';
+                ctx.lineWidth = 2;
+                for (let i = 1; i < 4; i++) {
+                    ctx.beginPath();
+                    ctx.ellipse(obstacle.x + obstacle.width/2, obstacle.y + 10, obstacle.width/2 - i*3, 5, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                }
+            }
+        }
+        
+        // Main game loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Initialize game when page loads
+        window.addEventListener('load', init);
+    </script>
+</body>
+</html>
