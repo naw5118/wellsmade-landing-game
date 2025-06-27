@@ -17,7 +17,7 @@
         
         body {
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: linear-gradient(135deg, #87CEEB 0%, #98D8E8 100%);
+            background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 50%, #45B7D1 100%);
             overflow: hidden;
             user-select: none;
             height: 100vh;
@@ -25,6 +25,14 @@
             flex-direction: column;
             align-items: center;
             justify-content: center;
+            animation: backgroundShift 20s ease-in-out infinite;
+        }
+        
+        @keyframes backgroundShift {
+            0%, 100% { background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 50%, #45B7D1 100%); }
+            25% { background: linear-gradient(135deg, #4ECDC4 0%, #45B7D1 50%, #96CEB4 100%); }
+            50% { background: linear-gradient(135deg, #45B7D1 0%, #96CEB4 50%, #FFEAA7 100%); }
+            75% { background: linear-gradient(135deg, #96CEB4 0%, #FFEAA7 50%, #FF6B6B 100%); }
         }
         
         /* Header styles */
@@ -41,6 +49,12 @@
             letter-spacing: 2px;
             margin-bottom: 10px;
             text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+            animation: titleGlow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes titleGlow {
+            from { text-shadow: 2px 2px 4px rgba(0,0,0,0.1), 0 0 20px rgba(255,255,255,0.5); }
+            to { text-shadow: 2px 2px 4px rgba(0,0,0,0.1), 0 0 30px rgba(255,255,255,0.8); }
         }
         
         .subtitle {
@@ -56,11 +70,11 @@
             width: 100vw;
             max-width: 1200px;
             height: 400px;
-            background: linear-gradient(to bottom, #87CEEB 0%, #98D8E8 60%, #90EE90 60%, #228B22 100%);
+            background: linear-gradient(to bottom, #87CEEB 0%, #98D8E8 40%, #90EE90 60%, #228B22 80%, #8B4513 100%);
             border: 3px solid #2c3e50;
-            border-radius: 10px;
+            border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
         }
         
         /* Game canvas */
@@ -285,31 +299,87 @@
         // Game objects
         const player = {
             x: 100,
-            y: canvas?.height - 80 || 320,
-            width: 60,
-            height: 40,
+            y: canvas?.height - 120 || 280,
+            width: 80,
+            height: 60,
             velocityY: 0,
-            jumpPower: -15,
-            gravity: 0.8,
+            jumpPower: -18,
+            gravity: 0.6,
             grounded: true,
-            color: '#FFD700' // Gold color
+            color: '#FFD700',
+            animFrame: 0
         };
         
         const squirrel = {
-            x: 200,
-            y: canvas?.height - 80 || 320,
-            width: 40,
-            height: 30,
+            x: 220,
+            y: canvas?.height - 100 || 300,
+            width: 50,
+            height: 40,
             velocityY: 0,
-            jumpPower: -12,
-            gravity: 0.8,
+            jumpPower: -16,
+            gravity: 0.6,
             grounded: true,
-            color: '#8B4513', // Brown color
-            jumpCooldown: 0
+            color: '#8B4513',
+            jumpCooldown: 0,
+            animFrame: 0
         };
         
         const obstacles = [];
         const clouds = [];
+        const backgroundElements = [];
+        
+        // Base64 encoded upbeat background music (shorter loop)
+        const backgroundMusicBase64 = "data:audio/wav;base64,UklGRpQHAABXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAZGF0YXAHAAA="; // Placeholder - will be generated
+        
+        // Initialize game
+        function init() {
+            resizeCanvas();
+            setupAudio();
+            resetGame();
+            initBackgroundElements();
+            
+            // Event listeners
+            document.addEventListener('keydown', handleKeyPress);
+            canvas.addEventListener('click', handleClick);
+            canvas.addEventListener('touchstart', handleTouch);
+            document.getElementById('startBtn').addEventListener('click', startGame);
+            document.getElementById('playAgainBtn').addEventListener('click', restartGame);
+            muteBtn.addEventListener('click', toggleMute);
+            
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Start game loop
+            gameLoop();
+        }
+        
+        // Initialize background elements
+        function initBackgroundElements() {
+            // Add hills in background
+            for (let i = 0; i < 3; i++) {
+                backgroundElements.push({
+                    type: 'hill',
+                    x: i * 400,
+                    y: canvas.height * 0.7,
+                    width: 300,
+                    height: 150,
+                    color: '#95a5a6',
+                    speed: 0.5
+                });
+            }
+            
+            // Add trees
+            for (let i = 0; i < 5; i++) {
+                backgroundElements.push({
+                    type: 'tree',
+                    x: i * 250 + 150,
+                    y: canvas.height * 0.65,
+                    width: 40,
+                    height: 80,
+                    color: '#2d3436',
+                    speed: 0.8
+                });
+            }
+        }
         
         // Initialize game
         function init() {
@@ -336,19 +406,36 @@
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 
-                // Create a simple background music using Web Audio API
+                // Create more pleasant background music
                 const sampleRate = audioContext.sampleRate;
-                const duration = 4; // 4 seconds loop
+                const duration = 8; // 8 seconds loop
                 const frameCount = sampleRate * duration;
                 
-                musicBuffer = audioContext.createBuffer(1, frameCount, sampleRate);
-                const channelData = musicBuffer.getChannelData(0);
+                musicBuffer = audioContext.createBuffer(2, frameCount, sampleRate);
                 
-                // Generate a simple melody
-                for (let i = 0; i < frameCount; i++) {
-                    const t = i / sampleRate;
-                    const freq = 220 + Math.sin(t * 2) * 50; // Varying frequency
-                    channelData[i] = Math.sin(2 * Math.PI * freq * t) * 0.1 * Math.sin(t * Math.PI / duration);
+                // Generate a more complex, pleasant melody
+                for (let channel = 0; channel < 2; channel++) {
+                    const channelData = musicBuffer.getChannelData(channel);
+                    
+                    for (let i = 0; i < frameCount; i++) {
+                        const t = i / sampleRate;
+                        
+                        // Main melody (pentatonic scale for pleasant sound)
+                        const frequencies = [261.63, 293.66, 329.63, 392.00, 440.00]; // C major pentatonic
+                        const noteIndex = Math.floor((t * 2) % frequencies.length);
+                        const freq = frequencies[noteIndex];
+                        
+                        // Add harmony
+                        const harmony = frequencies[(noteIndex + 2) % frequencies.length];
+                        
+                        // Create the wave with envelope
+                        const envelope = Math.sin(t * Math.PI / 2) * Math.exp(-t * 0.3);
+                        const wave1 = Math.sin(2 * Math.PI * freq * t) * 0.3;
+                        const wave2 = Math.sin(2 * Math.PI * harmony * t) * 0.2;
+                        const wave3 = Math.sin(2 * Math.PI * freq * 2 * t) * 0.1; // Octave
+                        
+                        channelData[i] = (wave1 + wave2 + wave3) * envelope * 0.1;
+                    }
                 }
             } catch (error) {
                 console.log('Audio setup failed:', error);
@@ -444,37 +531,64 @@
         // Reset game state
         function resetGame() {
             score = 0;
-            gameSpeed = 3;
+            gameSpeed = 2.5; // Slightly slower initial speed
             obstacles.length = 0;
             clouds.length = 0;
             
             // Reset player
-            player.y = canvas.height - 80;
+            player.y = canvas.height - 120;
             player.velocityY = 0;
             player.grounded = true;
+            player.animFrame = 0;
             
             // Reset squirrel
-            squirrel.y = canvas.height - 80;
+            squirrel.y = canvas.height - 100;
             squirrel.velocityY = 0;
             squirrel.grounded = true;
             squirrel.jumpCooldown = 0;
+            squirrel.animFrame = 0;
             
-            // Generate initial clouds
+            // Generate initial clouds and background
             generateClouds();
+            initBackgroundElements();
             
             updateScore();
         }
         
         // Generate obstacles
         function generateObstacle() {
-            if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 300) {
-                obstacles.push({
+            if (obstacles.length === 0 || obstacles[obstacles.length - 1].x < canvas.width - 400) {
+                const obstacleTypes = ['bush', 'fence', 'frisbee'];
+                const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
+                
+                let obstacle = {
                     x: canvas.width,
-                    y: canvas.height - 60,
-                    width: 30,
-                    height: 60,
+                    type: type,
                     color: '#654321'
-                });
+                };
+                
+                switch(type) {
+                    case 'bush':
+                        obstacle.y = canvas.height - 80;
+                        obstacle.width = 50;
+                        obstacle.height = 60;
+                        obstacle.color = '#228B22';
+                        break;
+                    case 'fence':
+                        obstacle.y = canvas.height - 90;
+                        obstacle.width = 20;
+                        obstacle.height = 70;
+                        obstacle.color = '#8B4513';
+                        break;
+                    case 'frisbee':
+                        obstacle.y = canvas.height - 50;
+                        obstacle.width = 40;
+                        obstacle.height = 15;
+                        obstacle.color = '#FF6B6B';
+                        break;
+                }
+                
+                obstacles.push(obstacle);
             }
         }
         
@@ -499,8 +613,12 @@
             score += gameSpeed * 0.1;
             updateScore();
             
-            // Increase game speed gradually
-            gameSpeed += 0.001;
+            // Increase game speed gradually (slower increase)
+            gameSpeed += 0.0005;
+            
+            // Update animation frames
+            player.animFrame += 0.2;
+            squirrel.animFrame += 0.25;
             
             // Update player physics
             updatePlayerPhysics();
@@ -512,11 +630,24 @@
             generateObstacle();
             updateObstacles();
             
-            // Update clouds
+            // Update clouds and background
             updateClouds();
+            updateBackground();
             
             // Check collisions
             checkCollisions();
+        }
+        
+        // Update background elements
+        function updateBackground() {
+            for (let element of backgroundElements) {
+                element.x -= element.speed;
+                
+                // Reset position when off-screen
+                if (element.x + element.width < 0) {
+                    element.x = canvas.width + Math.random() * 200;
+                }
+            }
         }
         
         // Update player physics
@@ -528,7 +659,7 @@
             }
             
             // Ground collision
-            const groundY = canvas.height - 80;
+            const groundY = canvas.height - 120;
             if (player.y >= groundY) {
                 player.y = groundY;
                 player.velocityY = 0;
@@ -547,7 +678,7 @@
             // Check if squirrel should jump (look ahead for obstacles)
             let shouldJump = false;
             for (let obstacle of obstacles) {
-                if (obstacle.x > squirrel.x && obstacle.x < squirrel.x + 120 && squirrel.grounded && squirrel.jumpCooldown === 0) {
+                if (obstacle.x > squirrel.x && obstacle.x < squirrel.x + 150 && squirrel.grounded && squirrel.jumpCooldown === 0) {
                     shouldJump = true;
                     break;
                 }
@@ -567,7 +698,7 @@
             }
             
             // Ground collision for squirrel
-            const groundY = canvas.height - 80;
+            const groundY = canvas.height - 100;
             if (squirrel.y >= groundY) {
                 squirrel.y = groundY;
                 squirrel.velocityY = 0;
@@ -634,6 +765,9 @@
             // Draw background
             drawBackground();
             
+            // Draw background elements (hills, trees)
+            drawBackgroundElements();
+            
             // Draw clouds
             drawClouds();
             
@@ -648,17 +782,84 @@
             }
         }
         
+        // Draw background elements
+        function drawBackgroundElements() {
+            for (let element of backgroundElements) {
+                if (element.type === 'hill') {
+                    drawHill(element);
+                } else if (element.type === 'tree') {
+                    drawTree(element);
+                }
+            }
+        }
+        
+        // Draw hill
+        function drawHill(hill) {
+            ctx.save();
+            ctx.fillStyle = hill.color;
+            ctx.beginPath();
+            ctx.moveTo(hill.x, hill.y);
+            ctx.quadraticCurveTo(hill.x + hill.width/2, hill.y - hill.height, hill.x + hill.width, hill.y);
+            ctx.lineTo(hill.x + hill.width, canvas.height);
+            ctx.lineTo(hill.x, canvas.height);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Add shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.1)';
+            ctx.beginPath();
+            ctx.moveTo(hill.x, hill.y);
+            ctx.quadraticCurveTo(hill.x + hill.width/2, hill.y - hill.height, hill.x + hill.width, hill.y);
+            ctx.lineTo(hill.x + hill.width, hill.y + 20);
+            ctx.quadraticCurveTo(hill.x + hill.width/2, hill.y - hill.height + 20, hill.x, hill.y + 20);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+        
+        // Draw tree
+        function drawTree(tree) {
+            ctx.save();
+            // Tree trunk
+            ctx.fillStyle = '#8B4513';
+            ctx.fillRect(tree.x + tree.width/3, tree.y, tree.width/3, tree.height/2);
+            
+            // Tree crown
+            ctx.fillStyle = '#228B22';
+            ctx.beginPath();
+            ctx.arc(tree.x + tree.width/2, tree.y - tree.height/4, tree.width/2, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Tree crown shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.beginPath();
+            ctx.arc(tree.x + tree.width/2 + 3, tree.y - tree.height/4 + 3, tree.width/2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+        
         // Draw background
         function drawBackground() {
-            // Sky gradient
+            // Enhanced sky gradient
             const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
             gradient.addColorStop(0, '#87CEEB');
-            gradient.addColorStop(0.6, '#98D8E8');
-            gradient.addColorStop(0.6, '#90EE90');
+            gradient.addColorStop(0.3, '#98D8E8');
+            gradient.addColorStop(0.6, '#B0E0E6');
+            gradient.addColorStop(0.8, '#90EE90');
             gradient.addColorStop(1, '#228B22');
             
             ctx.fillStyle = gradient;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Add sun
+            ctx.save();
+            ctx.fillStyle = '#FFD700';
+            ctx.shadowColor = '#FFF';
+            ctx.shadowBlur = 20;
+            ctx.beginPath();
+            ctx.arc(canvas.width - 100, 80, 40, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
         }
         
         // Draw clouds
@@ -676,114 +877,372 @@
         
         // Draw ground
         function drawGround() {
+            // Ground base
             ctx.fillStyle = '#8B4513';
             ctx.fillRect(0, canvas.height - 50, canvas.width, 50);
             
-            // Grass pattern
+            // Grass layer
+            ctx.fillStyle = '#32CD32';
+            ctx.fillRect(0, canvas.height - 55, canvas.width, 10);
+            
+            // Enhanced grass pattern with varying heights
             ctx.fillStyle = '#228B22';
-            for (let x = 0; x < canvas.width; x += 20) {
-                ctx.fillRect(x, canvas.height - 50, 3, -10);
-                ctx.fillRect(x + 7, canvas.height - 50, 3, -15);
-                ctx.fillRect(x + 14, canvas.height - 50, 3, -8);
+            for (let x = 0; x < canvas.width; x += 15) {
+                const grassHeight = Math.random() * 20 + 10;
+                const grassWidth = Math.random() * 4 + 2;
+                
+                // Grass blade
+                ctx.beginPath();
+                ctx.moveTo(x, canvas.height - 50);
+                ctx.quadraticCurveTo(x + grassWidth/2, canvas.height - 50 - grassHeight, x + grassWidth, canvas.height - 50);
+                ctx.strokeStyle = '#228B22';
+                ctx.lineWidth = grassWidth;
+                ctx.stroke();
+            }
+            
+            // Add some flowers
+            for (let x = 0; x < canvas.width; x += 80) {
+                if (Math.random() > 0.7) {
+                    drawFlower(x + Math.random() * 60, canvas.height - 50);
+                }
             }
         }
         
-        // Draw player (Border Collie)
+        // Draw small flowers
+        function drawFlower(x, y) {
+            ctx.save();
+            // Flower petals
+            const colors = ['#FF69B4', '#FF1493', '#FFB6C1', '#FFA500'];
+            ctx.fillStyle = colors[Math.floor(Math.random() * colors.length)];
+            
+            for (let i = 0; i < 5; i++) {
+                ctx.save();
+                ctx.translate(x, y - 5);
+                ctx.rotate((i * Math.PI * 2) / 5);
+                ctx.beginPath();
+                ctx.ellipse(0, -3, 2, 4, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.restore();
+            }
+            
+            // Flower center
+            ctx.fillStyle = '#FFD700';
+            ctx.beginPath();
+            ctx.arc(x, y - 5, 2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+        
+        // Draw player (Enhanced Border Collie)
         function drawPlayer() {
             ctx.save();
             ctx.translate(player.x + player.width/2, player.y + player.height/2);
             
-            // Body
+            // Add bounce animation when running
+            const bounce = Math.sin(player.animFrame) * 3;
+            ctx.translate(0, bounce);
+            
+            // Shadow
+            ctx.save();
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.scale(1, 0.3);
+            ctx.beginPath();
+            ctx.ellipse(0, 20, player.width/2, player.height/4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            
+            // Body (main torso)
             ctx.fillStyle = player.color;
-            ctx.fillRect(-player.width/2, -player.height/2, player.width * 0.8, player.height * 0.6);
+            ctx.beginPath();
+            ctx.ellipse(0, 0, player.width * 0.4, player.height * 0.3, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Body outline
+            ctx.strokeStyle = '#DAA520';
+            ctx.lineWidth = 2;
+            ctx.stroke();
             
             // Head
             ctx.fillStyle = player.color;
             ctx.beginPath();
-            ctx.arc(-player.width/3, -player.height/3, player.width * 0.25, 0, Math.PI * 2);
+            ctx.ellipse(-player.width * 0.25, -player.height * 0.2, player.width * 0.25, player.height * 0.25, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = '#DAA520';
+            ctx.stroke();
+            
+            // Snout
+            ctx.fillStyle = '#F5DEB3';
+            ctx.beginPath();
+            ctx.ellipse(-player.width * 0.35, -player.height * 0.1, player.width * 0.1, player.height * 0.08, 0, 0, Math.PI * 2);
             ctx.fill();
             
-            // Ears
+            // Nose
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.ellipse(-player.width * 0.4, -player.height * 0.15, 3, 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Eyes
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.ellipse(-player.width * 0.3, -player.height * 0.25, 6, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(-player.width * 0.15, -player.height * 0.25, 6, 8, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Eye pupils
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.ellipse(-player.width * 0.3, -player.height * 0.25, 3, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(-player.width * 0.15, -player.height * 0.25, 3, 4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Ears (Border Collie style)
             ctx.fillStyle = '#B8860B';
             ctx.beginPath();
-            ctx.ellipse(-player.width/2, -player.height/2, 8, 15, -0.3, 0, Math.PI * 2);
-            ctx.ellipse(-player.width/4, -player.height/2, 8, 15, 0.3, 0, Math.PI * 2);
+            ctx.ellipse(-player.width * 0.4, -player.height * 0.4, 12, 20, -0.3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(-player.width * 0.1, -player.height * 0.4, 12, 20, 0.3, 0, Math.PI * 2);
             ctx.fill();
             
-            // Legs
+            // Legs with running animation
+            const legBounce = Math.sin(player.animFrame * 2) * 5;
             ctx.fillStyle = player.color;
-            const legY = player.height/4;
-            ctx.fillRect(-player.width/3, legY, 8, 15);
-            ctx.fillRect(-player.width/6, legY, 8, 15);
-            ctx.fillRect(player.width/6, legY, 8, 15);
-            ctx.fillRect(player.width/3, legY, 8, 15);
             
-            // Tail
+            // Front legs
+            ctx.fillRect(-player.width * 0.3, player.height * 0.15 + legBounce, 8, 20);
+            ctx.fillRect(-player.width * 0.15, player.height * 0.15 - legBounce, 8, 20);
+            
+            // Back legs
+            ctx.fillRect(player.width * 0.1, player.height * 0.15 - legBounce, 8, 20);
+            ctx.fillRect(player.width * 0.25, player.height * 0.15 + legBounce, 8, 20);
+            
+            // Tail (wagging)
+            const tailWag = Math.sin(player.animFrame * 3) * 0.3;
+            ctx.save();
+            ctx.translate(player.width * 0.4, 0);
+            ctx.rotate(tailWag);
             ctx.strokeStyle = player.color;
             ctx.lineWidth = 8;
             ctx.beginPath();
-            ctx.arc(player.width/2, 0, 15, -Math.PI/4, Math.PI/4);
+            ctx.arc(0, 0, 20, -Math.PI/3, Math.PI/3);
             ctx.stroke();
-            
-            // Eye
-            ctx.fillStyle = 'black';
-            ctx.beginPath();
-            ctx.arc(-player.width/4, -player.height/3, 3, 0, Math.PI * 2);
-            ctx.fill();
+            ctx.restore();
             
             ctx.restore();
         }
         
-        // Draw squirrel
+        // Draw squirrel (Enhanced)
         function drawSquirrel() {
             ctx.save();
             ctx.translate(squirrel.x + squirrel.width/2, squirrel.y + squirrel.height/2);
             
+            // Add running bounce animation
+            const bounce = Math.sin(squirrel.animFrame * 1.2) * 2;
+            ctx.translate(0, bounce);
+            
+            // Shadow
+            ctx.save();
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.scale(1, 0.3);
+            ctx.beginPath();
+            ctx.ellipse(0, 15, squirrel.width/3, squirrel.height/3, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            
             // Body
             ctx.fillStyle = squirrel.color;
-            ctx.fillRect(-squirrel.width/2, -squirrel.height/2, squirrel.width * 0.7, squirrel.height * 0.8);
-            
-            // Head
             ctx.beginPath();
-            ctx.arc(-squirrel.width/3, -squirrel.height/4, squirrel.width * 0.2, 0, Math.PI * 2);
+            ctx.ellipse(0, 0, squirrel.width * 0.35, squirrel.height * 0.4, 0, 0, Math.PI * 2);
             ctx.fill();
             
-            // Tail (bushy)
-            ctx.fillStyle = '#A0522D';
+            // Body outline
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            
+            // Head
+            ctx.fillStyle = squirrel.color;
             ctx.beginPath();
-            ctx.ellipse(squirrel.width/2, 0, 15, 25, 0.5, 0, Math.PI * 2);
+            ctx.ellipse(-squirrel.width * 0.2, -squirrel.height * 0.15, squirrel.width * 0.18, squirrel.height * 0.18, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Snout
+            ctx.fillStyle = '#CD853F';
+            ctx.beginPath();
+            ctx.ellipse(-squirrel.width * 0.3, -squirrel.height * 0.1, squirrel.width * 0.06, squirrel.height * 0.06, 0, 0, Math.PI * 2);
             ctx.fill();
             
             // Ears
             ctx.fillStyle = squirrel.color;
-            ctx.fillRect(-squirrel.width/2, -squirrel.height/2, 4, 8);
-            ctx.fillRect(-squirrel.width/4, -squirrel.height/2, 4, 8);
+            ctx.beginPath();
+            ctx.ellipse(-squirrel.width * 0.3, -squirrel.height * 0.3, 5, 10, -0.2, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(-squirrel.width * 0.1, -squirrel.height * 0.3, 5, 10, 0.2, 0, Math.PI * 2);
+            ctx.fill();
             
             // Eye
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.ellipse(-squirrel.width * 0.2, -squirrel.height * 0.18, 4, 5, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
             ctx.fillStyle = 'black';
             ctx.beginPath();
-            ctx.arc(-squirrel.width/4, -squirrel.height/4, 2, 0, Math.PI * 2);
+            ctx.ellipse(-squirrel.width * 0.2, -squirrel.height * 0.18, 2, 3, 0, 0, Math.PI * 2);
             ctx.fill();
+            
+            // Bushy tail with animation
+            const tailSway = Math.sin(squirrel.animFrame * 2) * 0.2;
+            ctx.save();
+            ctx.translate(squirrel.width * 0.3, -squirrel.height * 0.1);
+            ctx.rotate(tailSway);
+            
+            ctx.fillStyle = '#A0522D';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, 18, 30, 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Tail highlight
+            ctx.fillStyle = '#D2691E';
+            ctx.beginPath();
+            ctx.ellipse(-3, -5, 12, 20, 0.3, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+            
+            // Legs with running animation
+            const legBounce = Math.sin(squirrel.animFrame * 2.5) * 3;
+            ctx.fillStyle = squirrel.color;
+            
+            // Front legs
+            ctx.fillRect(-squirrel.width * 0.25, squirrel.height * 0.2 + legBounce, 4, 12);
+            ctx.fillRect(-squirrel.width * 0.1, squirrel.height * 0.2 - legBounce, 4, 12);
+            
+            // Back legs
+            ctx.fillRect(squirrel.width * 0.05, squirrel.height * 0.2 - legBounce, 4, 12);
+            ctx.fillRect(squirrel.width * 0.2, squirrel.height * 0.2 + legBounce, 4, 12);
             
             ctx.restore();
         }
         
-        // Draw obstacles
+        // Draw obstacles (Enhanced)
         function drawObstacles() {
-            ctx.fillStyle = '#654321';
             for (let obstacle of obstacles) {
-                // Draw as a tree stump
-                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+                ctx.save();
                 
-                // Tree rings
-                ctx.strokeStyle = '#8B4513';
-                ctx.lineWidth = 2;
-                for (let i = 1; i < 4; i++) {
-                    ctx.beginPath();
-                    ctx.ellipse(obstacle.x + obstacle.width/2, obstacle.y + 10, obstacle.width/2 - i*3, 5, 0, 0, Math.PI * 2);
-                    ctx.stroke();
+                switch(obstacle.type) {
+                    case 'bush':
+                        drawBush(obstacle);
+                        break;
+                    case 'fence':
+                        drawFence(obstacle);
+                        break;
+                    case 'frisbee':
+                        drawFrisbee(obstacle);
+                        break;
                 }
+                
+                ctx.restore();
             }
+        }
+        
+        // Draw bush obstacle
+        function drawBush(bush) {
+            // Bush shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.beginPath();
+            ctx.ellipse(bush.x + bush.width/2 + 3, bush.y + bush.height + 3, bush.width/2, 10, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Main bush
+            ctx.fillStyle = bush.color;
+            ctx.beginPath();
+            ctx.ellipse(bush.x + bush.width/2, bush.y + bush.height/2, bush.width/2, bush.height/2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Bush highlights
+            ctx.fillStyle = '#32CD32';
+            ctx.beginPath();
+            ctx.ellipse(bush.x + bush.width/3, bush.y + bush.height/3, bush.width/4, bush.height/4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Bush outline
+            ctx.strokeStyle = '#006400';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(bush.x + bush.width/2, bush.y + bush.height/2, bush.width/2, bush.height/2, 0, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+        
+        // Draw fence obstacle
+        function drawFence(fence) {
+            // Fence shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.fillRect(fence.x + 3, fence.y + 3, fence.width, fence.height);
+            
+            // Fence post
+            ctx.fillStyle = fence.color;
+            ctx.fillRect(fence.x, fence.y, fence.width, fence.height);
+            
+            // Fence post highlight
+            ctx.fillStyle = '#A0522D';
+            ctx.fillRect(fence.x, fence.y, fence.width/3, fence.height);
+            
+            // Fence post outline
+            ctx.strokeStyle = '#654321';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(fence.x, fence.y, fence.width, fence.height);
+            
+            // Fence top
+            ctx.fillStyle = '#654321';
+            ctx.beginPath();
+            ctx.moveTo(fence.x, fence.y);
+            ctx.lineTo(fence.x + fence.width/2, fence.y - 10);
+            ctx.lineTo(fence.x + fence.width, fence.y);
+            ctx.fill();
+        }
+        
+        // Draw frisbee obstacle
+        function drawFrisbee(frisbee) {
+            // Frisbee rotation for flying effect
+            const rotation = Date.now() * 0.01;
+            
+            ctx.save();
+            ctx.translate(frisbee.x + frisbee.width/2, frisbee.y + frisbee.height/2);
+            ctx.rotate(rotation);
+            
+            // Frisbee shadow
+            ctx.fillStyle = 'rgba(0,0,0,0.2)';
+            ctx.beginPath();
+            ctx.ellipse(3, 8, frisbee.width/2, frisbee.height/2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Main frisbee
+            ctx.fillStyle = frisbee.color;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, frisbee.width/2, frisbee.height/2, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Frisbee center
+            ctx.fillStyle = '#FF1493';
+            ctx.beginPath();
+            ctx.ellipse(0, 0, frisbee.width/4, frisbee.height/4, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Frisbee outline
+            ctx.strokeStyle = '#DC143C';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.ellipse(0, 0, frisbee.width/2, frisbee.height/2, 0, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.restore();
         }
         
         // Main game loop
